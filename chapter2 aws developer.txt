@@ -1,0 +1,13 @@
+mysql -u acloudguru -p -h acloudguru.crfelazqvbdy.us-east-1.rds.amazonaws.com acloudguru
+
+
+
+acloudguru.crfelazqvbdy.us-east-1.rds.amazonaws.com
+
+
+
+///////////////////////////////////////////////////////////////
+
+On-Demand Instances let you pay for compute capacity by the hour or second (minimum of 60 seconds) with no long-term commitments. On-demand instances satisfy the requirements of: low cost, availability during office hours and no lock in contracts. Dedicated instances are more costly,
+Reserved instances are a long term (1 to 3 year) commitment, and spot instances may terminate at any time so do not meet the availability requirements.
+

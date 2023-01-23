@@ -1,0 +1,327 @@
+Lab2: using EC2 roles and instance profiles in AWS
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+Akash@LAPTOP-LGHH269K MINGW64 ~
+$ ssh cloud_user@34.207.200.246
+The authenticity of host '34.207.200.246 (34.207.200.246)' can't be established.
+ED25519 key fingerprint is SHA256:GY/hGPq5cc5RVBHmWG2AgdAp0WehOsIsHmlQEpyPnCE.
+This key is not known by any other names
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '34.207.200.246' (ED25519) to the list of known hosts.
+(cloud_user@34.207.200.246) Password:
+(cloud_user@34.207.200.246) Password:
+Last failed login: Sat Feb  5 04:12:49 UTC 2022 from cpe-173-95-189-65.nc.res.rr.com on ssh:notty
+There was 1 failed login attempt since the last successful login.
+
+       __|  __|_  )
+       _|  (     /   Amazon Linux 2 AMI
+      ___|\___|___|
+
+https://aws.amazon.com/amazon-linux-2/
+[cloud_user@ip-10-0-1-150 ~]$ aws configure
+AWS Access Key ID [None]:
+AWS Secret Access Key [None]:
+Default region name [None]: us-east-1
+Default output format [None]: json
+[cloud_user@ip-10-0-1-150 ~]$ nano trust_policy_ec2.json
+[cloud_user@ip-10-0-1-150 ~]$ aws iam create-role --role-name DEV_ROLE --assume-role-policy-document file://trust_policy_ec2.json
+{
+    "Role": {
+        "AssumeRolePolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Action": "sts:AssumeRole",
+                    "Effect": "Allow",
+                    "Principal": {
+                        "Service": "ec2.amazonaws.com"
+                    }
+                }
+            ]
+        },
+        "RoleId": "AROASWRJPLKFG3AO7DI7M",
+        "CreateDate": "2022-02-05T04:18:49Z",
+        "RoleName": "DEV_ROLE",
+        "Path": "/",
+        "Arn": "arn:aws:iam::185844325002:role/DEV_ROLE"
+    }
+}
+[cloud_user@ip-10-0-1-150 ~]$ nano dev_s3_read_access.json
+[cloud_user@ip-10-0-1-150 ~]$ aws iam create-policy --policy-name DevS3ReadAccess --policy-document file://dev_s3_read_access.json
+{
+    "Policy": {
+        "PolicyName": "DevS3ReadAccess",
+        "PermissionsBoundaryUsageCount": 0,
+        "CreateDate": "2022-02-05T04:34:46Z",
+        "AttachmentCount": 0,
+        "IsAttachable": true,
+        "PolicyId": "ANPASWRJPLKFCCYHHJXIS",
+        "DefaultVersionId": "v1",
+        "Path": "/",
+        "Arn": "arn:aws:iam::185844325002:policy/DevS3ReadAccess",
+        "UpdateDate": "2022-02-05T04:34:46Z"
+    }
+}
+[cloud_user@ip-10-0-1-150 ~]$ aws iam attach-role-policy --role-name DEV_ROLE --policy-arn "arn:aws:iam::185844325002:policy/DevS3ReadAccess"
+[cloud_user@ip-10-0-1-150 ~]$ aws iam list-attached-role-policies --role-name Dev_Role
+{
+    "AttachedPolicies": [
+        {
+            "PolicyName": "DevS3ReadAccess",
+            "PolicyArn": "arn:aws:iam::185844325002:policy/DevS3ReadAccess"
+        }
+    ]
+}
+[cloud_user@ip-10-0-1-150 ~]$ aws iam create-instance-profile --instance-profile-name DEV_PROFILE
+{
+    "InstanceProfile": {
+        "InstanceProfileId": "AIPASWRJPLKFAHWY6WPGU",
+        "Roles": [],
+        "CreateDate": "2022-02-05T04:41:07Z",
+        "InstanceProfileName": "DEV_PROFILE",
+        "Path": "/",
+        "Arn": "arn:aws:iam::185844325002:instance-profile/DEV_PROFILE"
+    }
+}
+[cloud_user@ip-10-0-1-150 ~]$ aws iam add-role-to-instance-profile --instance-profile-name DEV_PROFILE --role-name DEV_ROLE
+[cloud_user@ip-10-0-1-150 ~]$ aws iam get-instance-profile --instance-profile-name DEV_PROFILE
+{
+    "InstanceProfile": {
+        "InstanceProfileId": "AIPASWRJPLKFAHWY6WPGU",
+        "Roles": [
+            {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Action": "sts:AssumeRole",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "ec2.amazonaws.com"
+                            }
+                        }
+                    ]
+                },
+                "RoleId": "AROASWRJPLKFG3AO7DI7M",
+                "CreateDate": "2022-02-05T04:18:49Z",
+                "RoleName": "DEV_ROLE",
+                "Path": "/",
+                "Arn": "arn:aws:iam::185844325002:role/DEV_ROLE"
+            }
+        ],
+        "CreateDate": "2022-02-05T04:41:07Z",
+        "InstanceProfileName": "DEV_PROFILE",
+        "Path": "/",
+        "Arn": "arn:aws:iam::185844325002:instance-profile/DEV_PROFILE"
+    }
+}
+[cloud_user@ip-10-0-1-150 ~]$ aws ec2 associate-iam-instance-profile --instance-id i-0e6ef32c9b84bc4ec --iam-instance-profile Name="DEV_PROFILE"
+{
+    "IamInstanceProfileAssociation": {
+        "InstanceId": "i-0e6ef32c9b84bc4ec",
+        "State": "associating",
+        "AssociationId": "iip-assoc-04957554fca450bb0",
+        "IamInstanceProfile": {
+            "Id": "AIPASWRJPLKFAHWY6WPGU",
+            "Arn": "arn:aws:iam::185844325002:instance-profile/DEV_PROFILE"
+        }
+    }
+}
+
+[cloud_user@ip-10-0-1-150 ~]$ aws ec2 describe-instances --instance-ids i-0e6ef32c9b84bc4ec
+{
+    "Reservations": [
+        {
+            "Instances": [
+                {
+                    "Monitoring": {
+                        "State": "disabled"
+                    },
+                    "PublicDnsName": "ec2-35-175-215-120.compute-1.amazonaws.com",
+                    "State": {
+                        "Code": 16,
+                        "Name": "running"
+                    },
+                    "EbsOptimized": false,
+                    "LaunchTime": "2022-02-05T03:58:43.000Z",
+                    "PublicIpAddress": "35.175.215.120",
+                    "PrivateIpAddress": "10.0.1.176",
+                    "ProductCodes": [],
+                    "VpcId": "vpc-07a93b288255e5b2b",
+                    "CpuOptions": {
+                        "CoreCount": 1,
+                        "ThreadsPerCore": 2
+                    },
+                    "StateTransitionReason": "",
+                    "InstanceId": "i-0e6ef32c9b84bc4ec",
+                    "EnaSupport": true,
+                    "ImageId": "ami-096e189c66c11b2b5",
+                    "PrivateDnsName": "ip-10-0-1-176.ec2.internal",
+                    "SecurityGroups": [
+                        {
+                            "GroupName": "cfst-3035-8b3cad8b731621c393deef594a602434-SecurityGroupHTTPAndSSH-1LP0G9V5MW46Y",
+                            "GroupId": "sg-0ff21f2ac9e15aa9e"
+                        }
+                    ],
+                    "ClientToken": "cfst-EC2In-9MXDSVMFO4H7",
+                    "SubnetId": "subnet-00903a03da5578920",
+                    "InstanceType": "t3.micro",
+                    "CapacityReservationSpecification": {
+                        "CapacityReservationPreference": "open"
+                    },
+                    "NetworkInterfaces": [
+                        {
+                            "Status": "in-use",
+                            "MacAddress": "0e:d9:7e:d4:fa:f9",
+                            "SourceDestCheck": true,
+                            "VpcId": "vpc-07a93b288255e5b2b",
+                            "Description": "",
+                            "NetworkInterfaceId": "eni-0f043d5c7268cfe2f",
+                            "PrivateIpAddresses": [
+                                {
+                                    "PrivateDnsName": "ip-10-0-1-176.ec2.internal",
+                                    "PrivateIpAddress": "10.0.1.176",
+                                    "Primary": true,
+                                    "Association": {
+                                        "PublicIp": "35.175.215.120",
+                                        "PublicDnsName": "ec2-35-175-215-120.compute-1.amazonaws.com",
+                                        "IpOwnerId": "amazon"
+                                    }
+                                }
+                            ],
+                            "PrivateDnsName": "ip-10-0-1-176.ec2.internal",
+                            "InterfaceType": "interface",
+                            "Attachment": {
+                                "Status": "attached",
+                                "DeviceIndex": 0,
+                                "DeleteOnTermination": true,
+                                "AttachmentId": "eni-attach-08d413eaa7d972560",
+                                "AttachTime": "2022-02-05T03:58:43.000Z"
+                            },
+                            "Groups": [
+                                {
+                                    "GroupName": "cfst-3035-8b3cad8b731621c393deef594a602434-SecurityGroupHTTPAndSSH-1LP0G9V5MW46Y",
+                                    "GroupId": "sg-0ff21f2ac9e15aa9e"
+                                }
+                            ],
+                            "Ipv6Addresses": [],
+                            "OwnerId": "185844325002",
+                            "PrivateIpAddress": "10.0.1.176",
+                            "SubnetId": "subnet-00903a03da5578920",
+                            "Association": {
+                                "PublicIp": "35.175.215.120",
+                                "PublicDnsName": "ec2-35-175-215-120.compute-1.amazonaws.com",
+                                "IpOwnerId": "amazon"
+                            }
+                        }
+                    ],
+                    "SourceDestCheck": true,
+                    "Placement": {
+                        "Tenancy": "default",
+                        "GroupName": "",
+                        "AvailabilityZone": "us-east-1a"
+                    },
+                    "Hypervisor": "xen",
+                    "BlockDeviceMappings": [
+                        {
+                            "DeviceName": "/dev/xvda",
+                            "Ebs": {
+                                "Status": "attached",
+                                "DeleteOnTermination": true,
+                                "VolumeId": "vol-0b460143c59882c59",
+                                "AttachTime": "2022-02-05T03:58:44.000Z"
+                            }
+                        }
+                    ],
+                    "Architecture": "x86_64",
+                    "RootDeviceType": "ebs",
+                    "IamInstanceProfile": {
+                        "Id": "AIPASWRJPLKFAHWY6WPGU",
+                        "Arn": "arn:aws:iam::185844325002:instance-profile/DEV_PROFILE"
+                    },
+                    "RootDeviceName": "/dev/xvda",
+                    "VirtualizationType": "hvm",
+                    "Tags": [
+                        {
+                            "Value": "cfst-3035-8b3cad8b731621c393deef594a602434",
+                            "Key": "aws:cloudformation:stack-name"
+                        },
+                        {
+                            "Value": "12379940",
+                            "Key": "UserId"
+                        },
+                        {
+                            "Value": "EC2InstanceWebServer",
+                            "Key": "aws:cloudformation:logical-id"
+                        },
+                        {
+                            "Value": "arn:aws:cloudformation:us-east-1:185844325002:stack/cfst-3035-8b3cad8b731621c393deef594a602434/cd9eea70-8637-11ec-911e-125c6536bdc3",
+                            "Key": "Application"
+                        },
+                        {
+                            "Value": "Web Server",
+                            "Key": "Name"
+                        },
+                        {
+                            "Value": "arn:aws:cloudformation:us-east-1:185844325002:stack/cfst-3035-8b3cad8b731621c393deef594a602434/cd9eea70-8637-11ec-911e-125c6536bdc3",
+                            "Key": "aws:cloudformation:stack-id"
+                        }
+                    ],
+                    "HibernationOptions": {
+                        "Configured": false
+                    },
+                    "MetadataOptions": {
+                        "State": "applied",
+                        "HttpEndpoint": "enabled",
+                        "HttpTokens": "optional",
+                        "HttpPutResponseHopLimit": 1
+                    },
+                    "AmiLaunchIndex": 0
+                }
+            ],
+            "ReservationId": "r-0cd88f50b40fea214",
+            "RequesterId": "043234062703",
+            "Groups": [],
+            "OwnerId": "185844325002"
+        }
+    ]
+}
+
+
+//Afterwords to exercse the credentials / Test the configuration
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+Akash@LAPTOP-LGHH269K MINGW64 ~
+$ ssh cloud_user@35.175.215.120
+The authenticity of host '35.175.215.120 (35.175.215.120)' can't be established.
+ED25519 key fingerprint is SHA256:daKfIuau0B7yHBBOC/jSiRR1iOQcts41Uu/XdcyK4u8.
+This key is not known by any other names
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '35.175.215.120' (ED25519) to the list of known hosts.
+(cloud_user@35.175.215.120) Password:
+
+       __|  __|_  )
+       _|  (     /   Amazon Linux 2 AMI
+      ___|\___|___|
+
+https://aws.amazon.com/amazon-linux-2/
+[cloud_user@ip-10-0-1-176 ~]$ aws sts get-caller-identity
+{
+    "Account": "185844325002",
+    "UserId": "AROASWRJPLKFG3AO7DI7M:i-0e6ef32c9b84bc4ec",
+    "Arn": "arn:aws:sts::185844325002:assumed-role/DEV_ROLE/i-0e6ef32c9b84bc4ec"
+}
+[cloud_user@ip-10-0-1-176 ~]$ aws s3 ls
+2022-02-05 03:58:03 cfst-3035-8b3cad8b731621c393d-s3bucketengineering-8sz5iles7nf9
+2022-02-05 03:58:03 cfst-3035-8b3cad8b731621c393d-s3bucketlookupfiles-1634fx0o0ocqg
+2022-02-05 03:58:04 cfst-3035-8b3cad8b731621c393deef-cloudtrailbucket-2j4doytto9q2
+2022-02-05 03:58:04 cfst-3035-8b3cad8b731621c393deef59-s3bucketsecret-1iccvo54wwk8k
+2022-02-05 03:58:03 cfst-3035-8b3cad8b731621c393deef594a-s3bucketprod-19a29ey6a03su
+2022-02-05 03:58:03 cfst-3035-8b3cad8b731621c393deef594a6-s3bucketdev-1dkubphjmayr8
+[cloud_user@ip-10-0-1-176 ~]$ aws s3 ls s3://cfst-3035-8b3cad8b731621c393deef594a6-s3bucketdev-1dkubphjmayr8
+2022-02-05 03:59:30         41 file1-cfst-3035-8b3cad8b731621c393deef594a6-s3bucketdev-1dkubphjmayr8
+2022-02-05 03:59:31         41 file2-cfst-3035-8b3cad8b731621c393deef594a6-s3bucketdev-1dkubphjmayr8
+2022-02-05 03:59:31         41 file3-cfst-3035-8b3cad8b731621c393deef594a6-s3bucketdev-1dkubphjmayr8
+2022-02-05 03:59:31         41 file4-cfst-3035-8b3cad8b731621c393deef594a6-s3bucketdev-1dkubphjmayr8
+2022-02-05 03:59:31         41 file5-cfst-3035-8b3cad8b731621c393deef594a6-s3bucketdev-1dkubphjmayr8
+[cloud_user@ip-10-0-1-176 ~]$
+
